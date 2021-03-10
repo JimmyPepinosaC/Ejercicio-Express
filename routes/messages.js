@@ -1,70 +1,48 @@
 const express = require('express');
 const router = express.Router();
-const joi = require('joi');
-const fs = require('fs');
 const Joi = require('joi');
 
-const mensajes = [
-    {
-    "message": "Hola",
-    "author": "JP",
-    "ts": "1"
-    },
-    {
-        "message": "Hola, como estas?",
-        "author": "DP",
-        "ts": "2"
-    },
-];
+const Message = require('../models/message');
 
-const leerJson = (callback) =>{
-    fs.readFile('./persistencia/mensajes.json', (err, data)=>
-    {
-        if (err) throw err;
-        callback(JSON.parse(data));
-    });
-    
-}
 
 /* GET */
 router.get('/', function(req, res, next) {
-//   leerJson((data)=>{
-//     res.send(data);
-//   });
-    res.send(mensajes);
-  
+    Message.findAll().then((result) => {
+        res.status(200).send(result);
+    }); 
 });
 
 /* GET ts */
 router.get('/:ts', function(req, res, next) {
     
-    // leerJson((data)=> {
-    //     let ts = req.params.ts;
-    //     let mensajeTs = json.find((mensaje) => mensaje.ts == ts);
-    //     if(!mensajeTs){
-    //     return res.status(404).send("The message with the given ts was not found.")
-    //     }
-    //     res.send(mensajeTs);
-    // });
     let ts = req.params.ts;
-    let mensajeTs = mensajes.find((mensaje) => mensaje.ts == ts);
-    if(!mensajeTs){
-    return res.status(404).send("The message with the given ts was not found.")
-    }
-    res.send(mensajeTs);
+    Message.findAll({
+        where:{
+            ts: ts
+    }}).then((result)=>{
+        if(result.length === 0){
+            return res.status(404).send("The message with the given ts was not found.");
+        }
+        res.status(200).send(result);
+    });
+    
   });
 
   router.post('/', function(req, res, next) {
-    //   leerJson((data)=>{
-    //     res.send(data);
-    //   });
     const {error} = validar(req.body);
     if (error) {
         return res.status(400).send(error.details[0].message);
     }
-    res.send(req.body);
-    mensajes.push(req.body);
-    next();
+    const {message, author, ts} = req.body;
+    Message.create({
+        message: message,
+        author: author,
+        ts: ts
+    }).then((result)=> {
+        res.status(200).send(result);
+        next();
+    });
+    
   });
 
   router.put('/:ts', function(req, res, next) {
@@ -74,33 +52,31 @@ router.get('/:ts', function(req, res, next) {
     }
 
     let ts = req.params.ts;
-    let mensajeTs = mensajes.find((mensaje) => mensaje.ts == ts);
-    if(!mensajeTs){
-    return res.status(404).send("The message with the given ts was not found.")
+    Message.update(req.body, {
+        where:{
+            ts: ts
     }
-
-    mensajeTs.message = req.body.message;
-    mensajeTs.author = req.body.author;
-
-    res.status(200).send("The message with the given ts was updated.");
-    
-      
-  })
+    }).then((result) => {
+        if(result[0] === 0){
+            return res.status(404).send("The message with the given ts was not found.");
+        }
+        res.status(200).send("The message with the given ts was updated.");
+    });
+  });
 
   router.delete('/:ts', function(req, res, next) {
-    //   leerJson((data)=>{
-    //     res.send(data);
-    //   });
     let ts = req.params.ts;
-    let mensajeTs = mensajes.find((mensaje) => mensaje.ts == ts);
-    if(!mensajeTs){
-    return res.status(404).send("The message with the given ts was not found.")
+    Message.destroy( {
+        where:{
+            ts: ts
     }
-
-    const index = mensajes.indexOf(mensajeTs);
-    mensajes.splice(index, 1);
-
-    res.send("The message with the given ts was deleted.")
+    }).then((result) =>{
+        if(result === 0){
+            return res.status(404).send("The message with the given ts was not found.");
+        }
+        res.status(200).send(result + " messages with the given ts were deleted.")
+    });
+    
   });
 
 const validar = (mensaje) => {

@@ -12,8 +12,33 @@ const renderMessages = (data) => {
 const handleSubmit = (evt) => {
   evt.preventDefault();
   const message = document.getElementById("message");
-  const author = document.getElementById("author");
-  ws.send(message.value);
+  console.log(message);
+  let date = new Date();
+
+  const body = {message: message.value, author: "Jimmy PepinosaFRONT", ts: date.getDate().toString()};
+  const bodyjson = JSON.stringify(body);
+  console.log(bodyjson);
+  fetch("http://localhost:3000/chat/api/messages/", {
+    method: "POST", 
+    body: bodyjson, 
+    headers: {
+    'Content-Type': 'application/json'}
+  })
+  .then(response => {
+    if (response.status === 200) {
+      return response.json();
+    } else {
+      throw new Error('Something went wrong on api server!');
+    }
+  })
+  .then(response => {
+    console.debug(response);
+    // ...
+  }).catch(error => {
+    console.error(error);
+  });
+
+  //ws.send(message.value);
   message.value = "";
 };
 
